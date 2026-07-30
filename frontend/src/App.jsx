@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import './App.css'
+import InventoryItems, { InventoryTable } from './components/InventoryItems'
+import { loadInventoryItems } from './data/inventoryService'
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'grid' },
@@ -7,14 +9,6 @@ const navItems = [
   { id: 'items', label: 'Inventory Items', icon: 'box' },
   { id: 'history', label: 'Inventory History', icon: 'history' },
   { id: 'audit', label: 'Audit Log', icon: 'clipboard' },
-]
-
-const inventory = [
-  { sku: 'ITM-2048', name: 'Wireless Scanner', category: 'Equipment', stock: 24, status: 'In stock', updated: '8:42 AM' },
-  { sku: 'ITM-1987', name: 'Shipping Labels', category: 'Supplies', stock: 8, status: 'Low stock', updated: '8:18 AM' },
-  { sku: 'ITM-1842', name: 'Packing Tape', category: 'Supplies', stock: 42, status: 'In stock', updated: 'Yesterday' },
-  { sku: 'ITM-1721', name: 'Safety Gloves', category: 'Safety', stock: 0, status: 'Out of stock', updated: 'Yesterday' },
-  { sku: 'ITM-1655', name: 'Storage Bin — Large', category: 'Storage', stock: 16, status: 'In stock', updated: 'Jul 25' },
 ]
 
 const pageDetails = {
@@ -116,30 +110,7 @@ function Sidebar({ activePage, onNavigate, onLogout, isOpen, onClose }) {
   )
 }
 
-function InventoryTable({ compact = false }) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Item</th><th>Category</th><th>Available</th><th>Status</th><th>Updated</th></tr>
-        </thead>
-        <tbody>
-          {inventory.slice(0, compact ? 4 : inventory.length).map((item) => (
-            <tr key={item.sku}>
-              <td><strong>{item.name}</strong><small>{item.sku}</small></td>
-              <td>{item.category}</td>
-              <td><span className="stock-number">{item.stock}</span> units</td>
-              <td><span className={`stock-status ${item.status.toLowerCase().replaceAll(' ', '-')}`}>{item.status}</span></td>
-              <td>{item.updated}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function Dashboard({ onNavigate }) {
+function Dashboard({ inventoryItems, onNavigate, onAddItem }) {
   const cards = [
     { label: 'Total items', value: '1,248', meta: '+12 this month', tone: 'blue', icon: 'box' },
     { label: 'Low stock', value: '18', meta: 'Needs attention', tone: 'amber', icon: 'trend' },
@@ -164,7 +135,7 @@ function Dashboard({ onNavigate }) {
           <div><h2>Inventory overview</h2><p>Items that may need your attention</p></div>
           <button className="text-button" type="button" onClick={() => onNavigate('items')}>View all items <Icon name="arrow" size={16} /></button>
         </div>
-        <InventoryTable compact />
+        <InventoryTable items={inventoryItems} compact />
       </section>
       <section className="bottom-grid">
         <article className="panel activity-panel">
@@ -177,7 +148,7 @@ function Dashboard({ onNavigate }) {
         </article>
         <article className="panel quick-panel">
           <div className="panel-header"><div><h2>Quick actions</h2><p>Common inventory tasks</p></div></div>
-          <button type="button"><span className="card-icon blue"><Icon name="plus" size={19} /></span><span><strong>Add inventory item</strong><small>Create a new item record</small></span><Icon name="arrow" size={17} /></button>
+          <button type="button" onClick={onAddItem}><span className="card-icon blue"><Icon name="plus" size={19} /></span><span><strong>Add inventory item</strong><small>Create a new item record</small></span><Icon name="arrow" size={17} /></button>
           <button type="button" onClick={() => onNavigate('today')}><span className="card-icon green"><Icon name="calendar" size={19} /></span><span><strong>Review today’s changes</strong><small>See all daily activity</small></span><Icon name="arrow" size={17} /></button>
         </article>
       </section>
@@ -204,10 +175,6 @@ function StandardPage({ page }) {
     ],
   }
 
-  if (page === 'items') {
-    return <section className="panel page-panel"><div className="panel-header"><div><h2>All inventory</h2><p>5 sample items shown</p></div><button className="primary-button small-button" type="button"><Icon name="plus" size={17} /> Add item</button></div><InventoryTable /></section>
-  }
-
   const headings = page === 'audit'
     ? ['Time', 'Action', 'Details', 'User', 'Result']
     : ['Time', 'Activity', 'Item', 'Change', 'User']
@@ -224,10 +191,16 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activePage, setActivePage] = useState('dashboard')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [inventoryItems, setInventoryItems] = useState(loadInventoryItems)
+  const [addItemRequest, setAddItemRequest] = useState(0)
 
   if (!isLoggedIn) return <Login onEnter={() => setIsLoggedIn(true)} />
 
   const details = pageDetails[activePage]
+  const openAddItem = () => {
+    setActivePage('items')
+    setAddItemRequest((request) => request + 1)
+  }
 
   return (
     <div className="app-shell">
@@ -243,7 +216,9 @@ function App() {
             <div><p className="eyebrow">{details.eyebrow}</p><h1>{details.title}</h1><p>{details.description}</p></div>
             <div className="top-status"><span className="status-dot" /><span><strong>Backend pending</strong><small>Using demo data</small></span></div>
           </div>
-          {activePage === 'dashboard' ? <Dashboard onNavigate={setActivePage} /> : <StandardPage page={activePage} />}
+          {activePage === 'dashboard' && <Dashboard inventoryItems={inventoryItems} onNavigate={setActivePage} onAddItem={openAddItem} />}
+          {activePage === 'items' && <InventoryItems items={inventoryItems} setItems={setInventoryItems} addRequest={addItemRequest} onAddRequestHandled={() => setAddItemRequest(0)} />}
+          {!['dashboard', 'items'].includes(activePage) && <StandardPage page={activePage} />}
         </div>
       </main>
     </div>
