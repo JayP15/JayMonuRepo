@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { app } from "@azure/functions";
 
 import "./functions/Health";

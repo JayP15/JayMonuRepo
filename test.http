@@ -1,0 +1,10 @@
+PUT http://localhost:7071/api/products/1
+Content-Type: application/json
+
+{
+    "name": "Laptop",
+    "description": "Dell XPS 15 Updated",
+    "quantity": 15,
+    "price": 1300,
+    "category": "Electronics"
+}
